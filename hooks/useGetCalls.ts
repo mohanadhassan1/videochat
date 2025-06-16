@@ -1,19 +1,24 @@
-import { useUser } from "@clerk/nextjs";
 import { Call, useStreamVideoClient } from "@stream-io/video-react-sdk";
 import { useEffect, useState } from "react";
 
-
 export const useGetCalls = () => {
-
     const [calls, setCalls] = useState<Call[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [user, setUser] = useState<{ id: string; name: string } | null>(null);
     
     const client = useStreamVideoClient();
-    const { user } = useUser();
+
+    useEffect(() => {
+        // Get user from localStorage
+        const storedUser = localStorage.getItem('videoUser');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+    }, []);
 
     useEffect(() => {
         const loadCalls = async () => {
-            if(!client || !user?.id) return;
+            if (!client || !user?.id) return;
 
             setIsLoading(true);
 
@@ -32,6 +37,9 @@ export const useGetCalls = () => {
                 setCalls(calls);
             } catch (error) {
                 console.log(error);
+                // For anonymous users, we might not be able to query calls
+                // This is expected behavior
+                setCalls([]);
             } finally {
                 setIsLoading(false);
             }

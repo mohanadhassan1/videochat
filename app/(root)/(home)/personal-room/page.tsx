@@ -3,9 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useGetCallById } from "@/hooks/useGetCallById";
-import { useUser } from "@clerk/nextjs";
 import { useStreamVideoClient } from "@stream-io/video-react-sdk";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 
 const Table = ({
@@ -26,37 +25,63 @@ const Table = ({
 );
 
 const PersonalRoom = () => {
-
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useUser();
+  const [user, setUser] = useState<{ id: string; name: string } | null>(null);
+  
+  const client = useStreamVideoClient();
+
+  useEffect(() => {
+    // Get or create user from localStorage
+    const storedUser = localStorage.getItem('videoUser');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      // Create a new user for personal room
+      const newUser = {
+        id: crypto.randomUUID(),
+        name: 'Anonymous User'
+      };
+      localStorage.setItem('videoUser', JSON.stringify(newUser));
+      setUser(newUser);
+    }
+  }, []);
+
   const meetingId = user?.id;
   const meetingLink = `${process.env.NEXT_PUBLIC_BASE_URL}/meeting/${meetingId}?personal=true`;
 
   const { call } = useGetCallById(meetingId!);
-  const client = useStreamVideoClient();
 
   const startRoom = async () => {
     if (!client || !user) return;
 
-    if (!call) {
-      const newCall = client.call("default", meetingId!);
-      await newCall.getOrCreate({
-        data: {
-          starts_at: new Date().toISOString(),
-        },
-      });
-    }
+    try {
+      if (!call) {
+        const newCall = client.call("default", meetingId!);
+        await newCall.getOrCreate({
+          data: {
+            starts_at: new Date().toISOString(),
+          },
+        });
+      }
 
-    router.push(`/meeting/${meetingId}?personal=true`)
+      router.push(`/meeting/${meetingId}?personal=true`);
+    } catch (error) {
+      console.log(error);
+      toast({ title: "Failed to start meeting" });
+    }
   };
+
+  if (!user) {
+    return <div className="flex size-full items-center justify-center text-white">Loading...</div>;
+  }
 
   return (
     <section className="flex size-full flex-col gap-10 text-white">
-      <h1 className="text-3xl font-bold">PersonalRoom</h1>
+      <h1 className="text-3xl font-bold">Personal Room</h1>
 
       <div className="flex w-full flex-col gap-8 xl:max-w-[900px]">
-        <Table title="Topic" description={`${user?.username}'s meeting room`} />
+        <Table title="Topic" description={`${user.name}'s meeting room`} />
         <Table title="Meeting ID" description={meetingId!} />
         <Table title="Invite Link" description={meetingLink} />
       </div>

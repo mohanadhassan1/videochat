@@ -58,8 +58,6 @@ npx shadcn-ui@latest add dropdown-menu
 npx shadcn-ui@latest add textarea
 npx shadcn-ui@latest add input
 
-npm install @clerk/nextjs
-
 npm install @stream-io/video-react-sdk
 npm install @stream-io/node-sdk
 
